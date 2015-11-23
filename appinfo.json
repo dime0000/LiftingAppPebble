@@ -1,0 +1,23 @@
+{
+    "appKeys": {
+        "EXERCISE_NAME": 0,
+        "KEY_EXERCISE_VALUE": 1
+    },
+    "capabilities": [
+        ""
+    ],
+    "companyName": "dime0000@yahoo.com",
+    "longName": "LiftingApp",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "2",
+    "shortName": "LiftingApp",
+    "uuid": "5b5cfec9-24a8-4f69-b8fb-8e4a1b4934ae",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}

@@ -28,7 +28,7 @@
 int LIST_MESSAGE_WINDOW_NUM_ROWS  = 20;
 
 // no idea if i need this. experiment
-int LIST_MESSAGE_WINDOW_CELL_HEIGHT = 30;
+int LIST_MESSAGE_WINDOW_CELL_HEIGHT = 40;
 
 // no idea about this either
 int LIST_MESSAGE_WINDOW_MENU_HEIGHT = 600;
@@ -164,7 +164,13 @@ static void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_
   
   strcpy(s_buff, exercise_names[(int)cell_index->row]);
   
-  menu_cell_basic_draw(ctx, cell_layer, s_buff, NULL, NULL);
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx, s_buff, fonts_get_system_font(FONT_KEY_GOTHIC_18), layer_get_bounds(cell_layer), 
+                     GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL );
+  
+  
+  
+ // menu_cell_basic_draw(ctx, cell_layer, s_buff, NULL, NULL);
 }
 
 static int16_t get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {

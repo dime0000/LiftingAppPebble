@@ -18,13 +18,13 @@ var xhrRequest = function (url, type, callback) {
 
 
 // PRESENTATION: main method - uses a web api that returns JSON
-function getExercises() {
+function getExercises(exercise_key) {
 
   // Construct URL - change to the exercises URL..
   // something wrong with the URL!
   
 // PRESENTATION: URL
-  var url = 'http://wger.de/api/v2/exercise.json/';
+  var url = exercise_key;
 
   console.log('Running getExercises');
 
@@ -47,7 +47,12 @@ function getExercises() {
       // should go through results array!
       for(var i in data)
       {
-          exercisename = exercisename + data[i].name + "|";
+          if (data[i].language == "2" && data[i].status == "2") {
+            exercisename = exercisename + data[i].name + "|";
+          }
+      }
+      if (json.next !== null) {
+        exercisename = exercisename + json.next + "|";
       }
       
      
@@ -99,7 +104,7 @@ Pebble.addEventListener('appmessage',
     if (exercise_key !== undefined) {
         // Show the parsed response
       console.log("GOOD HERE-->" + exercise_key);
-      getExercises();
+      getExercises(exercise_key);
     } else {
         // Show the parsed response
       console.log("WHAT DO I DO HERE??");

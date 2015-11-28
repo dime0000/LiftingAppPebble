@@ -21,25 +21,29 @@
 // TODO - replace with array length
 // which means array needs to be global
 // service *should* be returning 20 at a time
-#define LIST_MESSAGE_WINDOW_NUM_ROWS    20
 
-// no idea if i need this. experiment
-#define LIST_MESSAGE_WINDOW_CELL_HEIGHT 30
-
-// no idea about this either
-#define LIST_MESSAGE_WINDOW_MENU_HEIGHT \
-    LIST_MESSAGE_WINDOW_NUM_ROWS * LIST_MESSAGE_WINDOW_CELL_HEIGHT
 
 #define EXERCISE_NAME_MAX_LENGTH 100
 
+int LIST_MESSAGE_WINDOW_NUM_ROWS  = 20;
+
+// no idea if i need this. experiment
+int LIST_MESSAGE_WINDOW_CELL_HEIGHT = 30;
+
+// no idea about this either
+int LIST_MESSAGE_WINDOW_MENU_HEIGHT = 600;
+
+
 int repCount = 0;
-int curlUpX = -800;
-int curlDownX = 900;
+int curlUpX = -850;
+int curlDownX = 850;
+
+int sampleToLog = 0;
 
 bool isUp = true;
 bool isDown = false;
 
-static char  exercise_names[LIST_MESSAGE_WINDOW_NUM_ROWS][EXERCISE_NAME_MAX_LENGTH];
+static char  exercise_names[20][100];
 
 static Window *s_main_window;
 static Window *s_exercise_window;
@@ -175,17 +179,23 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
   
   static char s_buffer[128];
 
-  /*
-  // Compose string of all data
-  snprintf(s_buffer, sizeof(s_buffer), 
-    "N X,Y,Z\n0 %d,%d,%d\n1 %d,%d,%d\n2 %d,%d,%d", 
-    data[0].x, data[0].y, data[0].z, 
-    data[1].x, data[1].y, data[1].z, 
-    data[2].x, data[2].y, data[2].z
-  );
+  // saple to log will make it so that its 1 log every second... 20 would be every 2.. etc.
+  if (sampleToLog == 25) {
+    // Compose string of all data
+    snprintf(s_buffer, sizeof(s_buffer), 
+      "N X,Y,Z\n0 %d,%d,%d\n1 %d,%d,%d\n2 %d,%d,%d", 
+      data[0].x, data[0].y, data[0].z, 
+      data[1].x, data[1].y, data[1].z, 
+      data[2].x, data[2].y, data[2].z
+    );
+    
+    APP_LOG(APP_LOG_LEVEL_INFO, "%s", s_buffer);
+    sampleToLog = 0;
+  } else {
+    sampleToLog ++;
+  }
   
-  APP_LOG(APP_LOG_LEVEL_INFO, "%s", s_buffer);
-  */
+  // TODO - need to change the value of curlUpX, curlDownX and/or use ddiferent data depending on exercise
   
   if (data[0].x < curlUpX) {
     if (isDown) {
@@ -246,11 +256,10 @@ static void tracking_window_load(Window *window) {
 
 static void tracking_window_unload(Window *window) {
   // Destroy output TextLayer
-  
   text_layer_destroy(s_tracking_layer);
   text_layer_destroy(s_reps_layer);
+  window_destroy(window);
   accel_data_service_unsubscribe();
-  
 }
 
 
@@ -268,9 +277,15 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   //Get which row
   // draw row maybe?
 
-    static char s_buff[EXERCISE_NAME_MAX_LENGTH];
+  static char s_buff[EXERCISE_NAME_MAX_LENGTH];
+  strcpy(s_buff, exercise_names[(int)cell_index->row]);
   
-    strcpy(s_buff, exercise_names[(int)cell_index->row]);
+  if (strstr(s_buff, "http://wger.de/api/v2/exercise/?page=") != NULL) {
+    LIST_MESSAGE_WINDOW_NUM_ROWS  = 20; // need to reset to max
+    window_stack_pop(false);
+    sendString(0,s_buff); // 2 is the page number.. need to figure this out.   
+  }
+  else {
   
     s_tracking_window = window_create();
     
@@ -300,8 +315,8 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
     accel_data_service_subscribe(num_samples, data_handler);
   
     // Choose update rate
-    accel_service_set_sampling_rate(ACCEL_SAMPLING_50HZ);
-  
+    accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
+  }
 }
 
 void select_changed_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context)
@@ -384,12 +399,20 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   pch = strtok (new_exercise_layer,"|");
   while (pch != NULL)
   {
-
+    
     strcpy(exercise_names[i], pch);
     pch = strtok (NULL, "|");
 
     i++;
   }
+  
+  // dummy something up for now for page 2..
+  /*
+  strcpy(exercise_names[i], "NEXT -->");
+  i++;
+  */
+  // can i redefine the length based on how many returned here?
+  LIST_MESSAGE_WINDOW_NUM_ROWS = i;
 
 }
 
@@ -427,12 +450,13 @@ static void main_window_load(Window *window) {
 static void main_window_unload(Window *window) {
   // Destroy output TextLayer
   text_layer_destroy(s_output_layer);
+  window_destroy(window);
 }
 
 // PRESENTATION: this handler sends a message to js file for handling
 void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-  
-  send(0,0);
+  // this is where we'd send 0,1 - 0,2 etc with the 2nd number being the page number..
+  sendString(0,"http://wger.de/api/v2/exercise/?page=1");
   
 }
 
@@ -470,9 +494,7 @@ static void init() {
 }
 
 static void deinit() {
-  window_destroy(s_main_window);
-
-  
+  //window_destroy(s_main_window);
 }
 
 

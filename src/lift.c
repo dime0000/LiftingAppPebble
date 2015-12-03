@@ -328,7 +328,8 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   
   if (strstr(selected_exercise, "http://wger.de/api/v2/exercise/") != NULL) {
     LIST_MESSAGE_WINDOW_NUM_ROWS  = 20; // need to reset to max
-    window_stack_pop(false);
+
+   //window_stack_pop(false);
     sendString(0,selected_exercise); // 2 is the page number.. need to figure this out.   
   }
   else {
@@ -365,9 +366,7 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
     // Choose update rate
     accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
     
-    // now convert to lower case
 
-    //free(new_str2);
     
   }
 }
@@ -416,13 +415,14 @@ static void exercise_window_unload(Window *window) {
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   // here
   // may have to reset the array every time.. 
+  /*
   s_exercise_window = window_create();
   
   window_set_window_handlers(s_exercise_window, (WindowHandlers) {
     .load = exercise_window_load,
     .unload = exercise_window_unload
   }); 
-  
+  */
   memset(exercise_names, 0, sizeof exercise_names);
   
   // PRESENTATION: C strings.. always a pain
@@ -439,7 +439,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   }
   
   
-  window_stack_push(s_exercise_window, false);
+ // window_stack_push(s_exercise_window, false);
   
   //// PRESENTATION: Parsing and putting results in to an array for later
 
@@ -458,6 +458,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
     i++;
   }
+  menu_layer_set_selected_index(s_exercise_menu_layer, (MenuIndex) {0, 0}, MenuRowAlignTop, false);
+  menu_layer_reload_data(s_exercise_menu_layer);
   
   // dummy something up for now for page 2..
   /*
@@ -511,6 +513,14 @@ static void main_window_unload(Window *window) {
 // PRESENTATION: this handler sends a message to js file for handling
 void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
   // this is where we'd send 0,1 - 0,2 etc with the 2nd number being the page number..
+  s_exercise_window = window_create();
+  
+  window_set_window_handlers(s_exercise_window, (WindowHandlers) {
+    .load = exercise_window_load,
+    .unload = exercise_window_unload
+  }); 
+  window_stack_push(s_exercise_window, false);
+  
   sendString(0,"http://wger.de/api/v2/exercise/?page=1");
   
 }

@@ -12,6 +12,7 @@
 #include <pebble.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 
 // keys being passed between phone and watch
 //
@@ -35,8 +36,8 @@ int LIST_MESSAGE_WINDOW_MENU_HEIGHT = 600;
 
 
 int repCount = 0;
-int curlUpX = -850;
-int curlDownX = 850;
+int curlUpX = 0;
+int curlDownX = 0;
 
 int sampleToLog = 0;
 
@@ -44,6 +45,8 @@ bool isUp = true;
 bool isDown = false;
 
 static char  exercise_names[20][100];
+static char selected_exercise[EXERCISE_NAME_MAX_LENGTH];
+  
 
 static Window *s_main_window;
 static Window *s_exercise_window;
@@ -132,22 +135,17 @@ static void sendString(int key, const char *value) {
 }
 //PRESENTATION: Sends data to android
 static void send_to_droid_click_handler(ClickRecognizerRef recognizer, void *context) {
-    const char *string = text_layer_get_text(s_reps_layer);
-    
-    const char *exercise = text_layer_get_text(s_tracking_layer);
-    
-    char * new_str ;
-    if((new_str = malloc(strlen(exercise)+ strlen(" ") + strlen(string)+1)) != NULL){
-        new_str[0] = '\0';   // ensures the memory is an empty string
-        strcat(new_str,exercise);
-        strcat(new_str," ");
-        strcat(new_str,string );
-    }
   
-    const char *final_string = new_str;  
+    char new_str[strlen(text_layer_get_text(s_tracking_layer))+ strlen(" ") + 
+                         strlen(text_layer_get_text(s_reps_layer))+1];
+  
+    new_str[0] = '\0';   // ensures the memory is an empty string
+    strcat(new_str,text_layer_get_text(s_tracking_layer));
+    strcat(new_str," ");
+    strcat(new_str,text_layer_get_text(s_reps_layer) );
+
+    sendString(KEY_EXERCISE_VALUE, new_str);
     
-    
-    sendString(KEY_EXERCISE_VALUE, final_string);
 }
 
 // PRESENTATION: MenuLayer functions... maybe?
@@ -183,10 +181,11 @@ static int16_t get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex 
 static void data_handler(AccelData *data, uint32_t num_samples) {
   // Long lived buffer
   
+  
   static char s_buffer[128];
 
   // saple to log will make it so that its 1 log every second... 20 would be every 2.. etc.
-  if (sampleToLog == 25) {
+  if (sampleToLog == 50) {
     // Compose string of all data
     snprintf(s_buffer, sizeof(s_buffer), 
       "N X,Y,Z\n0 %d,%d,%d\n1 %d,%d,%d\n2 %d,%d,%d", 
@@ -194,7 +193,6 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
       data[1].x, data[1].y, data[1].z, 
       data[2].x, data[2].y, data[2].z
     );
-    
     APP_LOG(APP_LOG_LEVEL_INFO, "%s", s_buffer);
     sampleToLog = 0;
   } else {
@@ -202,8 +200,50 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
   }
   
   // TODO - need to change the value of curlUpX, curlDownX and/or use ddiferent data depending on exercise
+  //if (strstr(s_buff, "http://wger.de/api/v2/exercise/?page=") != NULL) {
+  //text_layer_get_text(s_tracking_layer);
+    int counter=0;
+ 
+    for (counter = 0; selected_exercise[counter] != '\0'; counter++)
+      selected_exercise[counter] = tolower((unsigned char)selected_exercise[counter]);
+
+    
+
+  int dataToScan = data[0].x; 
+  curlUpX = -2000;
+  curlDownX = 2000;
   
-  if (data[0].x < curlUpX) {
+  
+  if (strstr(selected_exercise, "biceps curls") != NULL) {
+    curlUpX = -850;
+    curlDownX = 850;
+    dataToScan = data[0].x;
+  }
+  
+  else if (strstr(selected_exercise, "shoulder press") != NULL)  {
+    curlUpX = -15;
+    curlDownX = 140;
+    dataToScan = data[0].z;
+  }
+  else if (strstr(selected_exercise, "bench press") != NULL || 
+            strstr(selected_exercise, "benchpress") != NULL)  {
+    curlUpX = 120;
+    curlDownX = 150;
+    dataToScan = data[0].z;
+  }
+  else if (strstr(selected_exercise, "squat") != NULL)  {
+    curlUpX = -15;
+    curlDownX = 140;
+    dataToScan = data[0].z;
+  }
+  
+/*
+  down	up
+< -575	> - 180
+// requires reverse
+  */
+
+  if (dataToScan < curlUpX) {
     if (isDown) {
       repCount = repCount + 1;
       isUp = true;
@@ -218,11 +258,12 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
 
     }
     
-  }
-  if (data[0].x > curlDownX) {
+  } else if (dataToScan > curlDownX) {
     isDown = true;
     isUp = false;
   }
+  
+  
   
   // buzz 3 times when complete and stop logging. 
   
@@ -283,19 +324,19 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   //Get which row
   // draw row maybe?
 
-  static char s_buff[EXERCISE_NAME_MAX_LENGTH];
-  strcpy(s_buff, exercise_names[(int)cell_index->row]);
+  strcpy(selected_exercise, exercise_names[(int)cell_index->row]);
   
-  if (strstr(s_buff, "http://wger.de/api/v2/exercise/?page=") != NULL) {
+  if (strstr(selected_exercise, "http://wger.de/api/v2/exercise/") != NULL) {
     LIST_MESSAGE_WINDOW_NUM_ROWS  = 20; // need to reset to max
     window_stack_pop(false);
-    sendString(0,s_buff); // 2 is the page number.. need to figure this out.   
+    sendString(0,selected_exercise); // 2 is the page number.. need to figure this out.   
   }
   else {
   
     s_tracking_window = window_create();
     
     window_set_click_config_provider(s_tracking_window, (ClickConfigProvider) tracking_config_provider);
+    
     
     window_set_window_handlers(s_tracking_window, (WindowHandlers) {
       .load = tracking_window_load,
@@ -306,13 +347,14 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
 
     window_stack_push(s_tracking_window, false);
   
-    char * new_str ;
-    if((new_str = malloc(strlen("Selected exercise: ")+strlen(s_buff)+1)) != NULL){
-        new_str[0] = '\0';   // ensures the memory is an empty string
-        strcat(new_str,"Selected exercise: ");
-        strcat(new_str,s_buff);
-    }
-    text_layer_set_text(s_tracking_layer,  new_str);
+    char new_str2[strlen("Selected exercise: ")+strlen(selected_exercise)+1] ;
+    
+    new_str2[0] = '\0';   // ensures the memory is an empty string
+    strcat(new_str2,"Selected exercise: ");
+      
+    strcat(new_str2,selected_exercise);
+    
+    text_layer_set_text(s_tracking_layer,  new_str2);
   
     int num_samples = 3;
     
@@ -322,6 +364,11 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   
     // Choose update rate
     accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
+    
+    // now convert to lower case
+
+    //free(new_str2);
+    
   }
 }
 
@@ -419,7 +466,9 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   */
   // can i redefine the length based on how many returned here?
   LIST_MESSAGE_WINDOW_NUM_ROWS = i;
-
+  
+  free(pch);
+  
 }
 
 

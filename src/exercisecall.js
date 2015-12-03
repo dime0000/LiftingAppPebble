@@ -43,6 +43,10 @@ function getExercises(exercise_key) {
       
       console.log('about to loop');
       
+      if (json.previous !== null && json.previous !== "null") {
+        exercisename = exercisename + json.previous + "|";
+      }
+      
       // PRESENTATION: loops through, puting the JSON "name" key in to delimited string
       // should go through results array!
       for(var i in data)
@@ -51,7 +55,7 @@ function getExercises(exercise_key) {
             exercisename = exercisename + data[i].name + "|";
           }
       }
-      if (json.next !== null) {
+      if (json.next !== null && json.next !== "null") {
         exercisename = exercisename + json.next + "|";
       }
       
